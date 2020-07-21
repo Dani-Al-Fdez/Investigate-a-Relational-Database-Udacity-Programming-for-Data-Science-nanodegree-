@@ -1,5 +1,5 @@
 
-#Investigate a Relational Database  - Udacity Programming for Data Science Nanodegree 
+# Investigate a Relational Database  - Udacity Programming for Data Science Nanodegree 
 
 
 This is the final project of the “Introduction to SQL” module.
