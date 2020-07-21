@@ -1,0 +1,94 @@
+/*  Slide 1, European Union*/
+WITH european_union AS (
+                        SELECT country_id,
+                               country,
+
+                                   CASE WHEN country IN ('Austria', 	'Belgium', 	'Bulgaria', 	'Croatia', 	'Cyprus', 	'Czechia', 	'Denmark', 	'Estonia', 	'Finland', 	'France', 	'Germany', 	'Greece', 	'Hungary', 	'Ireland', 	'Italy', 	'Latvia', 	'Lithuania', 	'Luxembourg', 	'Malta', 	'Netherlands', 	'Poland', 	'Portugal', 	'Romania', 	'Slovakia', 	'Slovenia', 	'Spain', 	'Sweden'
+                        ) THEN 'European Union'
+                                    WHEN country = 'United Kingdom' THEN 'United Kingdom'
+                                    ELSE 'NON-EU countries' END AS european_union
+                        FROM country),
+
+
+    customer_payment AS (SELECT cu.address_id AS address_id, cu.customer_id AS customer_id, cu.first_name || ' ' || cu.last_name AS full_name, SUM(p.amount) customer_sum
+                          FROM customer AS cu
+                          JOIN payment AS p
+                          ON cu.customer_id = p.customer_id
+                          GROUP BY 1, 2),
+
+    country_sum AS (SELECT eu.country, eu.european_union european_union, SUM (cp.customer_sum) country_sum
+                    FROM european_union AS eu
+                    JOIN city AS c
+                    ON eu.country_id = c.country_id
+                    JOIN address AS a
+                    ON a.city_id = c.city_id
+                    JOIN customer_payment AS cp
+                    ON cp.address_id = a.address_id
+                    GROUP BY 1, 2
+                    ORDER BY 2 DESC)
+
+SELECT european_union, SUM(country_sum) AS eu_sum
+FROM country_sum
+GROUP BY 1
+ORDER BY 1, 2
+
+
+
+/*Slide 2, category profitability */
+
+
+SELECT c.name AS category, SUM(p.amount) AS total_amount, COUNT(r.rental_id) AS rentals, SUM(p.amount) / COUNT(r.rental_id) AS amount_per_rental
+FROM category AS c
+JOIN film_category AS fc
+ON c.category_id = fc.category_id
+JOIN film AS f
+ON fc.film_id = f.film_id
+JOIN inventory AS i
+ON f.film_id = i.film_id
+JOIN rental AS r
+ON i.inventory_id = r.inventory_id
+JOIN payment AS p
+ON r.rental_id = p.rental_id
+GROUP BY 1
+ORDER BY 4 DESC
+
+/* Slide 3, rental variation across stores*/
+
+SELECT DATE_TRUNC('month', r.rental_date) AS rental_date,
+      s1.store_id,
+      COUNT(r.*)
+FROM store AS s1
+JOIN staff AS s2
+USING(store_id)
+JOIN rental r
+USING(staff_id)
+GROUP BY 2, 1
+ORDER by 2,1
+
+
+/*Slide 4, categories duration*/
+WITH rental_quartiles AS(
+                          SELECT film_id,
+                                 title,
+                                 rental_duration,
+                                 NTILE(4) OVER (ORDER BY rental_duration) AS quartile
+                          FROM film f
+                          ORDER BY film_id),
+
+          categories AS (SELECT category_id, name
+                         FROM category as C
+                         WHERE name IN ('Animation', 'Children', 'Classics', 'Comedy', 'Family', 'Music'))
+
+
+
+SELECT c.name, rq.quartile, COUNT(rq.film_id)
+FROM categories AS c
+JOIN film_category AS fc
+USING(category_id)
+JOIN rental_quartiles AS rq
+USING(film_id)
+GROUP BY 1, 2
+ORDER BY 1, 2
+
+
+
